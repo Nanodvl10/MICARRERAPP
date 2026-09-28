@@ -782,3 +782,16 @@ html[data-theme="light"] .logro,html[data-theme="light"] .ring-c~*{background:#f
 .rm-cue.solo .rm-cue-w{font-size:30px;line-height:1.02}
 .rm-cue.solo .rm-cue-t{font-size:14px;color:#c7ccd6;margin-top:6px}
 .rm-grid.two{grid-template-columns:1fr 1fr}
+
+/* ---- Palmares ---- */
+.pal-it{display:flex;align-items:stretch;gap:10px;width:100%;text-align:left;background:var(--g900, rgba(255,255,255,.03));border:1px solid var(--line2, rgba(255,255,255,.07));border-radius:14px;padding:10px 12px;margin:6px 0;color:inherit;font-family:inherit}
+.pal-it .bar{flex:0 0 4px;border-radius:3px}
+.pal-it .date{flex:0 0 44px;display:flex;align-items:center}
+.pal-it .date .d{font-size:12px;font-weight:800;color:var(--mist, #e9edf5)}
+.pal-it .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pal-it .ent{font-weight:800;font-size:14px;color:var(--mist, #e9edf5)}
+.pal-it .kc{font-size:12px;color:var(--dim, #9aa2b1)}
+.pal-it .kc b{color:#ff7a52}
+.pal-it .kc.dim{opacity:.7}
+.pal-pos{align-self:center;flex:0 0 auto;font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--mist, #e9edf5)}
+.pal-pos.pod{background:rgba(236,182,63,.18);color:#ecb63f}

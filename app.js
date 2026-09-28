@@ -247,7 +247,7 @@ function renderProgreso(sub){clearTimer();var race=featuredRace();var Pf=P();sub
   prep(race);var logs=getJ(KEYS(race.id).log);var weeks=weekStats(race);var tp=0,td=0,np=0,nd=0;weeks.forEach(function(w){tp+=w.plan;td+=w.done;np+=w.n;nd+=w.nd;});
   var ad=adherence(race),sk=streak(race);
   html+='<div class="meta">'+race.name+' &middot; '+nd+'/'+np+' sesiones</div></header><div class="wrap content">'+
-    '<div class="segbtns">'+[['resumen','Resumen'],['entrenos','Entrenos'],['cuerpo','Cuerpo']].map(function(t){return '<button class="segb'+(t[0]===sub?' on':'')+'" data-sub="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
+    '<div class="segbtns">'+[['resumen','Resumen'],['entrenos','Entrenos'],['palmares','Palmar\u00e9s'],['cuerpo','Cuerpo']].map(function(t){return '<button class="segb'+(t[0]===sub?' on':'')+'" data-sub="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>';
   if(sub==='resumen'){
     html+='<div class="summary"><div class="sm"><div class="sv">'+num(td)+'</div><div class="sl">km hechos</div></div><div class="sm"><div class="sv ember">'+(tp?Math.round(td/tp*100):0)+'%</div><div class="sl">del plan</div></div><div class="sm"><div class="sv gold">'+ad.pct+'%</div><div class="sl">dieta</div></div><div class="sm"><div class="sv">'+sk+'</div><div class="sl">racha</div></div></div>';
     html+=cardPrediccion(race)+cardForma();
@@ -268,6 +268,7 @@ function renderProgreso(sub){clearTimer();var race=featuredRace();var Pf=P();sub
     flush();
     html+='<button class="btn primary wide-btn" data-go="#/importar">'+I.up+' Importar entreno (GPX/TCX)</button>';
   }
+  if(sub==='palmares'){html+=palmaresHTML();}
   if(sub==='cuerpo'){
     var wt=getJ('weight');var isos=Object.keys(wt).sort();var vals=isos.map(function(k){return parseFloat(wt[k]);});var target=parseFloat(String(Pf.peso||'').replace(',','.'))||null;var last=vals.length?vals[vals.length-1]:null;var tIso=todayISO();
     html+='<div class="card"><div class="cc-h">'+I.scale+' Peso</div><div class="big" style="font-size:30px;font-weight:800;letter-spacing:-.02em">'+(last!=null?num(last)+'<small style="font-size:14px;color:var(--dim)"> kg</small>':'<small style="font-size:14px;color:var(--dim)">sin datos</small>')+'</div>'+(vals.length>1?'<div class="pf-note">'+(vals[vals.length-1]-vals[0]>0?'+':'')+num(vals[vals.length-1]-vals[0])+' kg desde el inicio'+(target?' &middot; objetivo '+num(target):'')+'</div>':'')+
@@ -280,6 +281,7 @@ function renderProgreso(sub){clearTimer();var race=featuredRace();var Pf=P();sub
   [].forEach.call(document.querySelectorAll('[data-cal]'),function(b){b.addEventListener('click',function(){var d=parseInt(b.dataset.cal,10);var m=cmo+d,y=cy;if(m<0){m=11;y--;}if(m>11){m=0;y++;}setJ('calmes',{y:y,m:m});renderProgreso('resumen');});});
   [].forEach.call(document.querySelectorAll('[data-sess]'),function(b){b.addEventListener('click',function(){detalleSesion(race,b.dataset.sess);});});
   var ws=document.getElementById('wt-save');if(ws)ws.addEventListener('click',function(){var v=parseFloat(document.getElementById('wt-in').value.replace(',','.'));if(!v)return;var W=getJ('weight');W[todayISO()]=v;setJ('weight',W);toast('Peso guardado');renderProgreso('cuerpo');});
+  if(sub==='palmares')bindPalmares();
   document.getElementById('share-prog').addEventListener('click',function(){var txt='Progreso '+race.name+': '+num(td)+'/'+tp+' km ('+(tp?Math.round(td/tp*100):0)+'%), dieta '+ad.pct+'%, racha '+sk+' dias.';share('Mi progreso',txt);});}
 function analisisSesion(race,x,l){
   var km=parseFloat(String(l.km||'').replace(',','.'))||0,sec=parseTime(l.tiempo);if(!km||!sec)return '';
@@ -311,6 +313,63 @@ function detalleSesion(race,iso){var x=race.days.filter(function(d){return d.iso
 function share(title,text){if(navigator.share){navigator.share({title:title,text:text}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){toast('Copiado al portapapeles');});}else{toast(text);}}
 
 /* ---------- AJUSTES ---------- */
+/* ---------- PALMARES ---------- */
+function palGet(){var P=getJ('palmares');if(!P.items)P.items=[];
+  if(!P.seeded){P.seeded=true;P.items.push({id:'p'+Date.now(),fecha:'2026-07-11',nombre:'Cross de los Pastores (La Llana)',lugar:'Horcajo de la Ribera',tipo:'trail',km:'11',dplus:'336',tiempo:'54:36',puesto:'2\u00ba',notas:'Me fundi en la bajada del km 9-11.'});setJ('palmares',P);}
+  return P;}
+function palNum(v){return parseFloat(String(v||'').replace(',','.'))||0;}
+function palItems(){var P=palGet();var out=P.items.map(function(x){var o=Object.assign({},x);o.src='manual';return o;});
+  (window.RACES||[]).forEach(function(r){var R=getJ(KEYS(r.id).result);if(!R||!R.tiempo)return;
+    out.push({id:'app-'+r.id,src:'app',raceId:r.id,fecha:r.date,nombre:r.name,lugar:r.subtitle||'',tipo:/trail/i.test(r.kind||'')?'trail':'asfalto',km:String(r.totalKm),dplus:String(r.dplus||'').replace(/[^\d]/g,''),tiempo:R.tiempo,puesto:R.puesto||'',notas:R.notas||''});});
+  out.forEach(function(x){x._s=parseTime(x.tiempo);x._km=palNum(x.km);x._d=palNum(x.dplus);x._eq=x._km+x._d/100;});
+  return out.sort(function(a,b){return a.fecha<b.fecha?1:-1;});}
+function palPodio(p){var m=String(p||'').match(/^\s*(\d+)/);return m&&+m[1]>=1&&+m[1]<=3;}
+function palForm(x){x=x||{tipo:'trail',fecha:todayISO()};
+  return '<div class="card" id="pal-form"><div class="cc-h">'+I.trophy+' '+(x.id?'Editar carrera':'Nueva carrera')+'</div><div class="lb-grid">'+
+  '<label class="wide">Carrera<input type="text" id="pf-nombre" value="'+esc(x.nombre)+'" placeholder="Nombre de la carrera"></label>'+
+  '<label>Fecha<input type="date" id="pf-fecha" value="'+esc(x.fecha)+'"></label>'+
+  '<label>Tipo<select id="pf-tipo"><option value="trail"'+(x.tipo==='trail'?' selected':'')+'>Trail</option><option value="asfalto"'+(x.tipo==='asfalto'?' selected':'')+'>Asfalto</option><option value="cross"'+(x.tipo==='cross'?' selected':'')+'>Cross</option></select></label>'+
+  '<label class="wide">Lugar<input type="text" id="pf-lugar" value="'+esc(x.lugar)+'" placeholder="Pueblo / ciudad"></label>'+
+  '<label>Km<input type="text" inputmode="decimal" id="pf-km" value="'+esc(x.km)+'" placeholder="10"></label>'+
+  '<label>Desnivel +<input type="text" inputmode="numeric" id="pf-dplus" value="'+esc(x.dplus)+'" placeholder="0"></label>'+
+  '<label>Tiempo<input type="text" id="pf-tiempo" value="'+esc(x.tiempo)+'" placeholder="h:mm:ss o mm:ss"></label>'+
+  '<label>Puesto<input type="text" id="pf-puesto" value="'+esc(x.puesto)+'" placeholder="2\u00ba / 5\u00ba cat"></label>'+
+  '<label class="wide">Notas<input type="text" id="pf-notas" value="'+esc(x.notas)+'" placeholder="Sensaciones, que repetir..."></label></div>'+
+  '<div class="lb-foot"><span class="lb-pace" id="pf-pace"></span><button class="btn sm" id="pf-cancel">Cancelar</button><button class="btn primary sm" id="pf-save" data-id="'+esc(x.id||'')+'">Guardar</button></div>'+
+  (x.id?'<button class="btn wide-btn danger-btn" id="pf-del" data-id="'+esc(x.id)+'">Eliminar</button>':'')+'</div>';}
+function palmaresHTML(){var L=palItems();var h='';
+  var kmT=0,dT=0,pod=0;L.forEach(function(x){kmT+=x._km;dT+=x._d;if(palPodio(x.puesto))pod++;});
+  h+='<div class="summary"><div class="sm"><div class="sv">'+L.length+'</div><div class="sl">carreras</div></div><div class="sm"><div class="sv ember">'+Math.round(kmT)+'</div><div class="sl">km</div></div><div class="sm"><div class="sv">'+Math.round(dT).toLocaleString('es-ES')+'</div><div class="sl">m D+</div></div><div class="sm"><div class="sv gold">'+pod+'</div><div class="sl">podios</div></div></div>';
+  var best=[['5K',4.8,5.3],['10K',9.7,10.4],['Media',20.8,21.4]].map(function(b){var c=L.filter(function(x){return x.tipo==='asfalto'&&x._s&&x._km>=b[1]&&x._km<=b[2];}).sort(function(a,c2){return a._s-c2._s;})[0];return c?[b[0],c]:null;}).filter(Boolean);
+  var tr=L.filter(function(x){return x.tipo==='trail'&&x._s&&x._eq;}).sort(function(a,b){return a._s/a._eq-b._s/b._eq;})[0];
+  if(best.length||tr){h+='<div class="card soft"><div class="cc-h">'+I.trophy+' Mejores marcas</div><div class="rec-grid">'+
+    best.map(function(b){return '<div><span class="ok2">'+b[0]+' asfalto</span><b>'+esc(b[1].tiempo)+'</b><small>'+esc(b[1].nombre)+' &middot; '+fmtShort(b[1].fecha)+'</small></div>';}).join('')+
+    (tr?'<div><span class="ok2">trail &middot; ritmo esfuerzo</span><b>'+fmtPace(tr._s,tr._eq).replace(' /km','')+'</b><small>'+esc(tr.nombre)+'</small></div>':'')+'</div></div>';}
+  h+='<div id="pal-slot"></div><button class="btn primary wide-btn" id="pal-add">'+I.trophy+' A\u00f1adir carrera</button>';
+  if(!L.length)h+='<div class="card"><p class="pf-note" style="margin:0">Aun no hay carreras. A\u00f1ade las anteriores con su fecha y tiempo.</p></div>';
+  var yr=null;L.forEach(function(x){var y=String(x.fecha).slice(0,4);if(y!==yr){yr=y;h+='<div class="section-label">'+y+'</div>';}
+    var col=x.tipo==='trail'?'#ff7a52':x.tipo==='cross'?'#ecb63f':'#6f8fae';
+    var pace=x._s&&x._km?fmtPace(x._s,x._km):'';var eq=x.tipo==='trail'&&x._d&&x._s?' &middot; esf. '+fmtPace(x._s,x._eq).replace(' /km',''):'';
+    h+='<button class="pal-it" data-pal="'+esc(x.id)+'" data-src="'+x.src+'"'+(x.raceId?' data-race="'+esc(x.raceId)+'"':'')+'><span class="bar" style="background:'+col+'"></span><span class="date"><span class="d">'+fmtShort(x.fecha)+'</span></span>'+
+      '<span class="mid"><span class="ent">'+esc(x.nombre)+'</span><span class="kc">'+(x._km?num(x._km)+' km':'')+(x._d?' &middot; +'+Math.round(x._d)+' m':'')+(x.tiempo?' &middot; <b>'+esc(x.tiempo)+'</b>':'')+(pace?' &middot; '+pace:'')+eq+'</span>'+(x.lugar?'<span class="kc dim">'+esc(x.lugar)+'</span>':'')+'</span>'+
+      (x.puesto?'<span class="pal-pos'+(palPodio(x.puesto)?' pod':'')+'">'+esc(x.puesto)+'</span>':'')+'</button>';});
+  h+='<p class="hint" style="margin:8px 2px 0">Las carreras de la app aparecen solas al guardar "Mi resultado". Ritmo esfuerzo = tiempo / (km + D+/100), para comparar trails con distinto desnivel.</p>';
+  return h;}
+function bindPalmares(){var slot=document.getElementById('pal-slot');if(!slot)return;
+  function open(x){slot.innerHTML=palForm(x);var add=document.getElementById('pal-add');if(add)add.style.display='none';
+    var t=document.getElementById('pf-tiempo'),k=document.getElementById('pf-km'),pc=document.getElementById('pf-pace');
+    function upd(){var s=parseTime(t.value),km=palNum(k.value);pc.textContent=s&&km?fmtPace(s,km):'';}t.oninput=upd;k.oninput=upd;upd();
+    slot.scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('pf-cancel').onclick=function(){renderProgreso('palmares');};
+    document.getElementById('pf-save').onclick=function(){var v=function(i){return document.getElementById('pf-'+i).value.trim();};
+      if(!v('nombre')||!v('fecha')){toast('Pon al menos nombre y fecha');return;}
+      var P=palGet();var id=this.dataset.id;var o={id:id||('p'+Date.now()),fecha:v('fecha'),nombre:v('nombre'),lugar:v('lugar'),tipo:v('tipo'),km:v('km'),dplus:v('dplus'),tiempo:v('tiempo'),puesto:v('puesto'),notas:v('notas')};
+      var i=P.items.findIndex(function(z){return z.id===o.id;});if(i>=0)P.items[i]=o;else P.items.push(o);setJ('palmares',P);toast('Carrera guardada');renderProgreso('palmares');};
+    var del=document.getElementById('pf-del');if(del)del.onclick=function(){if(!confirm('Eliminar esta carrera del palmares?'))return;var P=palGet();P.items=P.items.filter(function(z){return z.id!==del.dataset.id;});setJ('palmares',P);toast('Eliminada');renderProgreso('palmares');};}
+  document.getElementById('pal-add').onclick=function(){open(null);};
+  [].forEach.call(document.querySelectorAll('[data-pal]'),function(b){b.addEventListener('click',function(){
+    if(b.dataset.src==='app'){location.hash='#/race/'+b.dataset.race+'/carrera';toast('Editalo en Mi resultado, abajo del todo');return;}
+    var x=palGet().items.filter(function(z){return z.id===b.dataset.pal;})[0];if(x)open(x);});});}
 function renderAjustes(){clearTimer();var Pf=P();var chips=function(a,c){return (a||[]).map(function(x){return '<span class="chip'+(c?' '+c:'')+'">'+x+'</span>';}).join('');};var race=featuredRace();
   var html='<div class="view"><header class="home-head"><div class="kicker">Configuracion</div><h1>Mis <span class="devil">ajustes</span></h1><div class="meta">Version '+VERSION+'</div></header><div class="wrap content">'+
     '<div class="section-label">Mi perfil</div><div class="card"><div class="pf-row"><span>'+esc(Pf.nombre||'Corredor')+'</span><b>'+(Pf.peso||'-')+(Pf.edad?' &middot; '+esc(Pf.edad)+' anos':'')+'</b></div>'+(Pf.noGusta&&Pf.noGusta.length?'<div class="pf-blk"><div class="pf-h">NO ME GUSTA</div>'+chips(Pf.noGusta,'no')+'</div>':'')+(Pf.reglas&&Pf.reglas.length?'<div class="pf-blk"><div class="pf-h">REGLAS</div>'+chips(Pf.reglas)+'</div>':'')+'<button class="btn wide-btn" data-go="#/perfil" style="margin-top:12px">Editar perfil</button></div>'+
